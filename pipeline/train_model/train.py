@@ -41,8 +41,8 @@ def train_model(X_train_path, X_test_path, y_train_path, y_test_path,
     # Save model
     p = pathlib.Path(model_file_path)
     if not p.exists(): p.parent.absolute().mkdir(parents=True, exist_ok=True)
-    # pickle.dump(xgb_model, open(p, 'wb'))
-    xgb_model.save_model(p)
+    pickle.dump(xgb_model, open(p, 'wb'))
+    #xgb_model.save_model(p)
 
     # Save metrics
     p = pathlib.Path(mlpipeline_metrics_path)
