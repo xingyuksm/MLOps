@@ -1,0 +1,6 @@
+/temp_storage/*
+/notebooks/.ipynb_checkpoints/*
+/notebooks/models/*
+/notebooks/processed_data/*
+/notebooks/new_data.txt
+docker-compose.yml

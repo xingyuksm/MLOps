@@ -1,0 +1,129 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: iris-pipeline-
+  annotations: {pipelines.kubeflow.org/kfp_sdk_version: 1.8.1, pipelines.kubeflow.org/pipeline_compilation_time: '2021-10-18T18:50:59.100678',
+    pipelines.kubeflow.org/pipeline_spec: '{"description": "An example pipeline of
+      training a classification model on the Iris dataset", "name": "Iris pipeline"}'}
+  labels: {pipelines.kubeflow.org/kfp_sdk_version: 1.8.1}
+spec:
+  entrypoint: iris-pipeline
+  templates:
+  - name: data-ingestion
+    container:
+      args: []
+      command: [data_ingestion.py, --url, 'https://gist.githubusercontent.com/netj/8836201/raw/6f9306ad21398ea43cba4f7d537619d0e07d5ae3/iris.csv',
+        --output_path, /tmp/outputs/data/data]
+      image: xingyuusa/mlops-test:data-ingestion
+      imagePullPolicy: Always
+    outputs:
+      artifacts:
+      - {name: data-ingestion-data, path: /tmp/outputs/data/data}
+    metadata:
+      labels:
+        pipelines.kubeflow.org/kfp_sdk_version: 1.8.1
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+      annotations: {pipelines.kubeflow.org/component_spec: '{"description": "Ingest
+          data by input url.", "implementation": {"container": {"command": ["data_ingestion.py",
+          "--url", {"inputValue": "url"}, "--output_path", {"outputPath": "data"}],
+          "image": "xingyuusa/mlops-test:data-ingestion"}}, "inputs": [{"description":
+          "The URL to ingest the Iris data from", "name": "url", "type": "String"}],
+          "name": "Data Ingestion", "outputs": [{"description": "Ingested CSV file",
+          "name": "data", "type": "String"}]}', pipelines.kubeflow.org/component_ref: '{"digest":
+          "32623d7d3c8008fa286b56c2e05e89c204ecaf456cb6d0a1dca4f1390b615bf0", "url":
+          "./pipeline/data_ingestion/component.yaml"}', pipelines.kubeflow.org/arguments.parameters: '{"url":
+          "https://gist.githubusercontent.com/netj/8836201/raw/6f9306ad21398ea43cba4f7d537619d0e07d5ae3/iris.csv"}',
+        pipelines.kubeflow.org/max_cache_staleness: P0D}
+  - name: data-preprocess
+    container:
+      args: []
+      command: [data_preprocess.py, --data_path, /tmp/inputs/Ingested_data/data, --label_col,
+        variety, --x_train_path, /tmp/outputs/X_train/data, --x_test_path, /tmp/outputs/X_test/data,
+        --y_train_path, /tmp/outputs/y_train/data, --y_test_path, /tmp/outputs/y_test/data,
+        --label_encoder_path, /tmp/outputs/label_encoder/data]
+      image: xingyuusa/mlops-test:data-preprocess
+    inputs:
+      artifacts:
+      - {name: data-ingestion-data, path: /tmp/inputs/Ingested_data/data}
+    outputs:
+      artifacts:
+      - {name: data-preprocess-X-test, path: /tmp/outputs/X_test/data}
+      - {name: data-preprocess-X-train, path: /tmp/outputs/X_train/data}
+      - {name: data-preprocess-label-encoder, path: /tmp/outputs/label_encoder/data}
+      - {name: data-preprocess-y-test, path: /tmp/outputs/y_test/data}
+      - {name: data-preprocess-y-train, path: /tmp/outputs/y_train/data}
+    metadata:
+      labels:
+        pipelines.kubeflow.org/kfp_sdk_version: 1.8.1
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+      annotations: {pipelines.kubeflow.org/component_spec: '{"description": "Preprocess
+          ingested Iris for training a model", "implementation": {"container": {"command":
+          ["data_preprocess.py", "--data_path", {"inputPath": "Ingested data"}, "--label_col",
+          {"inputValue": "Label colname"}, "--x_train_path", {"outputPath": "X train"},
+          "--x_test_path", {"outputPath": "X test"}, "--y_train_path", {"outputPath":
+          "y train"}, "--y_test_path", {"outputPath": "y test"}, "--label_encoder_path",
+          {"outputPath": "label encoder"}], "image": "xingyuusa/mlops-test:data-preprocess"}},
+          "inputs": [{"name": "Ingested data"}, {"description": "Column name of the
+          label in the ingested CSV file", "name": "Label colname", "type": "String"}],
+          "name": "data preprocess", "outputs": [{"name": "X train"}, {"name": "X
+          test"}, {"name": "y train"}, {"name": "y test"}, {"name": "label encoder"}]}',
+        pipelines.kubeflow.org/component_ref: '{"digest": "890ddf650987d3a8c13596f835b39209e2e14fcdb0232ecd27ea13156bb76986",
+          "url": "./pipeline/data_preprocess/component.yaml"}', pipelines.kubeflow.org/arguments.parameters: '{"Label
+          colname": "variety"}'}
+  - name: iris-pipeline
+    dag:
+      tasks:
+      - {name: data-ingestion, template: data-ingestion}
+      - name: data-preprocess
+        template: data-preprocess
+        dependencies: [data-ingestion]
+        arguments:
+          artifacts:
+          - {name: data-ingestion-data, from: '{{tasks.data-ingestion.outputs.artifacts.data-ingestion-data}}'}
+      - name: train-an-iris-classifier
+        template: train-an-iris-classifier
+        dependencies: [data-preprocess]
+        arguments:
+          artifacts:
+          - {name: data-preprocess-X-test, from: '{{tasks.data-preprocess.outputs.artifacts.data-preprocess-X-test}}'}
+          - {name: data-preprocess-X-train, from: '{{tasks.data-preprocess.outputs.artifacts.data-preprocess-X-train}}'}
+          - {name: data-preprocess-y-test, from: '{{tasks.data-preprocess.outputs.artifacts.data-preprocess-y-test}}'}
+          - {name: data-preprocess-y-train, from: '{{tasks.data-preprocess.outputs.artifacts.data-preprocess-y-train}}'}
+  - name: train-an-iris-classifier
+    container:
+      args: []
+      command: [train.py, --X_train_path, /tmp/inputs/X_train/data, --X_test_path,
+        /tmp/inputs/X_test/data, --y_train_path, /tmp/inputs/y_train/data, --y_test_path,
+        /tmp/inputs/y_test/data, --n_estimator, '2', --output_path, /tmp/outputs/model_file/data]
+      image: xingyuusa/mlops-test:train_model
+    inputs:
+      artifacts:
+      - {name: data-preprocess-X-test, path: /tmp/inputs/X_test/data}
+      - {name: data-preprocess-X-train, path: /tmp/inputs/X_train/data}
+      - {name: data-preprocess-y-test, path: /tmp/inputs/y_test/data}
+      - {name: data-preprocess-y-train, path: /tmp/inputs/y_train/data}
+    outputs:
+      artifacts:
+      - {name: train-an-iris-classifier-model-file, path: /tmp/outputs/model_file/data}
+    metadata:
+      labels:
+        pipelines.kubeflow.org/kfp_sdk_version: 1.8.1
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+      annotations: {pipelines.kubeflow.org/component_spec: '{"description": "Trains
+          a XGB classifier for the Iris dataset", "implementation": {"container":
+          {"command": ["train.py", "--X_train_path", {"inputPath": "X train"}, "--X_test_path",
+          {"inputPath": "X test"}, "--y_train_path", {"inputPath": "y train"}, "--y_test_path",
+          {"inputPath": "y test"}, "--n_estimator", {"inputValue": "number of estimators"},
+          "--output_path", {"outputPath": "model file"}], "image": "xingyuusa/mlops-test:train_model"}},
+          "inputs": [{"name": "X train"}, {"name": "X test"}, {"name": "y train"},
+          {"name": "y test"}, {"default": "2", "name": "number of estimators", "type":
+          "Integer"}], "name": "train an Iris classifier", "outputs": [{"name": "model
+          file"}]}', pipelines.kubeflow.org/component_ref: '{"digest": "0895f6852bd4826ee9d88295e622cde26166a55906f481000ee528209b32a1d2",
+          "url": "./pipeline/train_model/component.yaml"}', pipelines.kubeflow.org/arguments.parameters: '{"number
+          of estimators": "2"}'}
+  arguments:
+    parameters: []
+  serviceAccountName: pipeline-runner

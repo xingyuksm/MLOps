@@ -1,0 +1,25 @@
+name: train an Iris classifier
+description: Trains a XGB classifier for the Iris dataset
+
+inputs:
+- {name: X train}
+- {name: X test}
+- {name: y train}
+- {name: y test}
+- {name: number of estimators, type: Integer, default: '2'}
+
+outputs:
+- {name: model file}
+
+implementation:
+  container:
+    image: xingyuusa/mlops-test:train_model
+    command: [
+      train.py,
+      --X_train_path, {inputPath: X train},
+      --X_test_path, {inputPath: X test},
+      --y_train_path, {inputPath: y train},
+      --y_test_path, {inputPath: y test},
+      --n_estimator, {inputValue: number of estimators},
+      --output_path, {outputPath: model file}
+    ]

@@ -1,0 +1,17 @@
+name: Data Ingestion
+description: Ingest data by input url.
+
+inputs:
+- {name: url, type: String, description: 'The URL to ingest the Iris data from'}
+
+outputs:
+- {name: data, type: String, description: 'Ingested CSV file'}
+
+implementation:
+  container:
+    image: xingyuusa/mlops-test:data-ingestion
+    command: [
+      data_ingestion.py,
+      --url, {inputValue: url},
+      --output_path, {outputPath: data}
+    ]

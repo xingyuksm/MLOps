@@ -1,0 +1,27 @@
+name: data preprocess
+description: Preprocess ingested Iris for training a model
+
+inputs:
+- {name: Ingested data}
+- {name: Label colname, type: String, description: 'Column name of the label in the ingested CSV file'}
+
+outputs:
+- {name: X train}
+- {name: X test}
+- {name: y train}
+- {name: y test}
+- {name: label encoder}
+
+implementation:
+  container:
+    image: xingyuusa/mlops-test:data-preprocess
+    command: [
+      data_preprocess.py,
+      --data_path, {inputPath: Ingested data},
+      --label_col, {inputValue: Label colname},
+      --x_train_path, {outputPath: X train},
+      --x_test_path, {outputPath: X test},
+      --y_train_path, {outputPath: y train},
+      --y_test_path, {outputPath: y test},
+      --label_encoder_path, {outputPath: label encoder}
+    ]

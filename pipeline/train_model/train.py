@@ -40,7 +40,7 @@ def train_model(X_train_path, X_test_path, y_train_path, y_test_path,
     # Save model
     p = pathlib.Path(output_path)
     if not p.exists(): p.mkdir(exist_ok=True)
-    pickle.dump(xgb_model, open(p / 'xgb.pkl', 'wb'))
+    pickle.dump(xgb_model, open(p, 'wb'))
 
 if __name__ == "__main__":
     try:

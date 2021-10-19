@@ -15,10 +15,11 @@ def data_ingestion(url, output_path):
     p = pathlib.Path(output_path)
     if p.exists():
         logger.warning('Output file already exists.')
-        with open(p, 'r') as f:
+        with open(output_path, 'r') as f:
             ret = f.read()
     else:
-        with open(p, 'w') as f:
+        p.parent.absolute().mkdir(parents=True, exist_ok=True)
+        with open(output_path, 'w') as f:
             r = requests.get(url)
             f.write(r.text)
             ret = r.text
