@@ -2,7 +2,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: Workflow
 metadata:
   generateName: iris-pipeline-
-  annotations: {pipelines.kubeflow.org/kfp_sdk_version: 1.8.1, pipelines.kubeflow.org/pipeline_compilation_time: '2021-10-18T18:50:59.100678',
+  annotations: {pipelines.kubeflow.org/kfp_sdk_version: 1.8.1, pipelines.kubeflow.org/pipeline_compilation_time: '2021-10-19T11:22:45.808152',
     pipelines.kubeflow.org/pipeline_spec: '{"description": "An example pipeline of
       training a classification model on the Iris dataset", "name": "Iris pipeline"}'}
   labels: {pipelines.kubeflow.org/kfp_sdk_version: 1.8.1}
@@ -43,6 +43,7 @@ spec:
         --y_train_path, /tmp/outputs/y_train/data, --y_test_path, /tmp/outputs/y_test/data,
         --label_encoder_path, /tmp/outputs/label_encoder/data]
       image: xingyuusa/mlops-test:data-preprocess
+      imagePullPolicy: Always
     inputs:
       artifacts:
       - {name: data-ingestion-data, path: /tmp/inputs/Ingested_data/data}
@@ -96,8 +97,10 @@ spec:
       args: []
       command: [train.py, --X_train_path, /tmp/inputs/X_train/data, --X_test_path,
         /tmp/inputs/X_test/data, --y_train_path, /tmp/inputs/y_train/data, --y_test_path,
-        /tmp/inputs/y_test/data, --n_estimator, '2', --output_path, /tmp/outputs/model_file/data]
+        /tmp/inputs/y_test/data, --n_estimator, '2', --model_file_path, /tmp/outputs/model_file_path/data,
+        --mlpipeline_metrics_path, /tmp/outputs/MLPipeline_Metrics/data]
       image: xingyuusa/mlops-test:train_model
+      imagePullPolicy: Always
     inputs:
       artifacts:
       - {name: data-preprocess-X-test, path: /tmp/inputs/X_test/data}
@@ -106,7 +109,8 @@ spec:
       - {name: data-preprocess-y-train, path: /tmp/inputs/y_train/data}
     outputs:
       artifacts:
-      - {name: train-an-iris-classifier-model-file, path: /tmp/outputs/model_file/data}
+      - {name: mlpipeline-metrics, path: /tmp/outputs/MLPipeline_Metrics/data}
+      - {name: train-an-iris-classifier-model-file-path, path: /tmp/outputs/model_file_path/data}
     metadata:
       labels:
         pipelines.kubeflow.org/kfp_sdk_version: 1.8.1
@@ -117,12 +121,14 @@ spec:
           {"command": ["train.py", "--X_train_path", {"inputPath": "X train"}, "--X_test_path",
           {"inputPath": "X test"}, "--y_train_path", {"inputPath": "y train"}, "--y_test_path",
           {"inputPath": "y test"}, "--n_estimator", {"inputValue": "number of estimators"},
-          "--output_path", {"outputPath": "model file"}], "image": "xingyuusa/mlops-test:train_model"}},
+          "--model_file_path", {"outputPath": "model file path"}, "--mlpipeline_metrics_path",
+          {"outputPath": "MLPipeline Metrics"}], "image": "xingyuusa/mlops-test:train_model"}},
           "inputs": [{"name": "X train"}, {"name": "X test"}, {"name": "y train"},
           {"name": "y test"}, {"default": "2", "name": "number of estimators", "type":
           "Integer"}], "name": "train an Iris classifier", "outputs": [{"name": "model
-          file"}]}', pipelines.kubeflow.org/component_ref: '{"digest": "0895f6852bd4826ee9d88295e622cde26166a55906f481000ee528209b32a1d2",
-          "url": "./pipeline/train_model/component.yaml"}', pipelines.kubeflow.org/arguments.parameters: '{"number
+          file path"}, {"name": "MLPipeline Metrics", "type": "Metrics"}]}', pipelines.kubeflow.org/component_ref: '{"digest":
+          "e90951da17c9655605f8f18e7559e401a074528f06317c2739c75f65717b4082", "url":
+          "./pipeline/train_model/component.yaml"}', pipelines.kubeflow.org/arguments.parameters: '{"number
           of estimators": "2"}'}
   arguments:
     parameters: []

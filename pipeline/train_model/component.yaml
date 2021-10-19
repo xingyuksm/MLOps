@@ -9,7 +9,8 @@ inputs:
 - {name: number of estimators, type: Integer, default: '2'}
 
 outputs:
-- {name: model file}
+- {name: model file path}
+- {name: MLPipeline Metrics, type: Metrics}
 
 implementation:
   container:
@@ -21,5 +22,6 @@ implementation:
       --y_train_path, {inputPath: y train},
       --y_test_path, {inputPath: y test},
       --n_estimator, {inputValue: number of estimators},
-      --output_path, {outputPath: model file}
+      --model_file_path, {outputPath: model file path},
+      --mlpipeline_metrics_path, {outputPath: MLPipeline Metrics}
     ]

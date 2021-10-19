@@ -39,10 +39,13 @@ def data_preprocess(data_path, label_col, x_train_path, x_test_path, y_train_pat
     for i in range(len(paths)):
         
         p = pathlib.Path(paths[i])
-        if not p.exists(): p.mkdir(exist_ok=True)
+        if not p.exists(): 
+            p.parent.absolute().mkdir(parents=True, exist_ok=True)
         data[i].to_csv(p, index=False)
     
     p = pathlib.Path(label_encoder_path)
+    if not p.exists():
+        p.parent.absolute().mkdir(parents=True, exist_ok=True)
     pickle.dump(le, open(p, 'wb'))
     
     return X_train, y_train, X_test, y_test

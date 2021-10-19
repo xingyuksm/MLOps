@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import json
 import pickle
 import pathlib
 import pandas as pd
@@ -12,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 def train_model(X_train_path, X_test_path, y_train_path, y_test_path, 
                 n_estimator,
-                output_path):
+                model_file_path, mlpipeline_metrics_path):
     '''Train and evaluate the model.
     
     '''
@@ -26,7 +27,7 @@ def train_model(X_train_path, X_test_path, y_train_path, y_test_path,
                                   eval_metric='mlogloss',
                                   random_state=42,
                                   n_estimators=n_estimator,
-                                  use_label_encoder=False
+                                  use_label_encoder=True
                                  )
     xgb_model.fit(X_train, y_train)
 
@@ -38,9 +39,25 @@ def train_model(X_train_path, X_test_path, y_train_path, y_test_path,
     logger.info(accuracy_score(y_test, y_pred))
     
     # Save model
-    p = pathlib.Path(output_path)
-    if not p.exists(): p.mkdir(exist_ok=True)
-    pickle.dump(xgb_model, open(p, 'wb'))
+    p = pathlib.Path(model_file_path)
+    if not p.exists(): p.parent.absolute().mkdir(parents=True, exist_ok=True)
+    # pickle.dump(xgb_model, open(p, 'wb'))
+    xgb_model.save_model(p)
+
+    # Save metrics
+    p = pathlib.Path(mlpipeline_metrics_path)
+    metrics = {
+        'metrics': [
+            {
+            'name': 'accuracy_score',
+            'numberValue': accuracy_score(y_test, y_pred),
+            'format': "PERCENTAGE"
+            }
+        ]
+    }
+    if not p.exists(): p.parent.absolute().mkdir(parents=True, exist_ok=True)
+    with open(p, 'w') as f:
+        json.dump(metrics, f)
 
 if __name__ == "__main__":
     try:
@@ -52,7 +69,8 @@ if __name__ == "__main__":
         parser.add_argument('--y_train_path', type=str, action='store')
         parser.add_argument('--y_test_path', type=str, action='store')
         parser.add_argument('--n_estimator', type=int, action='store')
-        parser.add_argument('--output_path', type=str, action='store')
+        parser.add_argument('--model_file_path', type=str, action='store')
+        parser.add_argument('--mlpipeline_metrics_path', type=str, action='store')
 
         FLAGS = parser.parse_args()
         X_train_path = FLAGS.X_train_path
@@ -60,12 +78,13 @@ if __name__ == "__main__":
         y_train_path = FLAGS.y_train_path
         y_test_path = FLAGS.y_test_path
         n_estimator = FLAGS.n_estimator
-        output_path = FLAGS.output_path
+        model_file_path = FLAGS.model_file_path
+        mlpipeline_metrics_path = FLAGS.mlpipeline_metrics_path
 
         # Call the train function
         train_model(X_train_path, X_test_path, y_train_path, y_test_path, 
                 n_estimator,
-                output_path)
+                model_file_path, mlpipeline_metrics_path)
 
     except Exception as e:
         logger.exception(e)

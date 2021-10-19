@@ -19,11 +19,12 @@ def iris_pipeline():
     processed_data = data_preprocess_op(ingested_data=ingested_data.outputs['data'],
                                         label_colname='variety'
                                         )
+    processed_data.container.set_image_pull_policy("Always")
     train_eval = train_eval_op(x_train=processed_data.outputs['x_train'],
                                 x_test=processed_data.outputs['x_test'],
                                 y_train=processed_data.outputs['y_train'],
                                 y_test=processed_data.outputs['y_test'],
                                 number_of_estimators=2
                                 )
-
+    train_eval.container.set_image_pull_policy("Always")
 kfp.compiler.Compiler().compile(pipeline_func=iris_pipeline, package_path='pipeline.yaml')
