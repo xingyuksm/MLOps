@@ -17,6 +17,9 @@ logger = logging.getLogger(__name__)
 model_file_path = os.getenv('MODEL_FILE_PATH')
 label_encoder_path = os.getenv('LABEL_ENCODER_PATH')
 
+logger.info(f"Model file path: {model_file_path}")
+logger.info(f"Label encoder path: {label_encoder_path}")
+
 @app.get("/")
 def read_root():
     return {"API": "Running", "Version": "1.0"}

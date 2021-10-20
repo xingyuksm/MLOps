@@ -15,7 +15,7 @@ docker run --volume $STORAGE:/temp_storage --rm xingyuusa/mlops-test:data-prepro
 --x_test_path="/temp_storage/X_test.csv" \
 --y_train_path="/temp_storage/y_train.csv" \
 --y_test_path="/temp_storage/y_test.csv" \
---label_encoder_path="/temp_storage/le.pkl "
+--label_encoder_path="/temp_storage/le "
 
 # Run Step 3: Train model
 docker run --volume $STORAGE:/temp_storage --rm xingyuusa/mlops-test:train_model train.py \
@@ -28,9 +28,5 @@ docker run --volume $STORAGE:/temp_storage --rm xingyuusa/mlops-test:train_model
 --mlpipeline_metrics_path="/temp_storage/metrics.txt"
 
 # Run Step 4: Deploy model
-docker run \
---volume $STORAGE:/temp_storage -e MODEL_FILE_PATH="/temp_storage/model.pkl" \
--e LABEL_ENCODER_PATH="/temp_storage/le.pkl" \
--p 9090:9090 \
---rm xingyuusa/mlops-test:deploy_model \
-uvicorn app.main:app --reload --workers 1 --host 0.0.0.0 --port 9090
+docker run -p 9090:9090 \
+--rm xingyuusa/mlops-test:deploy_model 

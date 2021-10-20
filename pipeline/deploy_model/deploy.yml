@@ -1,9 +1,35 @@
-apiVersion: "serving.kserve.io/v1beta1"
-kind: "InferenceService"
+apiVersion: apps/v1
+kind: Deployment
 metadata:
-  name: "xgboost-iris"
+  name: iris-deployment
+  labels:
+    app: iris
 spec:
-  predictor:
-    xgboost:
-      protocolVersion: "v2"
-      storageUri: "gs://kfserving-samples/models/xgboost/iris"
+  replicas: 1
+  selector:
+      matchLabels:
+        app: iris
+  template:
+    metadata:
+      labels:
+        app: iris
+    spec:
+      containers:
+      - name: iris
+        image: xingyuusa/mlops-test:deploy_model
+        ports:
+        - containerPort: 9090
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: iris
+spec:
+  selector:
+    app: iris
+  type: LoadBalancer
+  ports:
+    - protocol: TCP
+      port: 9090
+      targetPort: 9090
+      nodePort: 30000

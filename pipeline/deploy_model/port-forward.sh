@@ -1,0 +1,1 @@
+kubectl port-forward svc/iris 9090:9090
