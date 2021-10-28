@@ -1,4 +1,4 @@
-# Kubeflow Adpatation Memo
+# Kubeflow Pipeline POC Memo
 
 Author: Xing Yu
 Date: Oct 22, 2021
@@ -121,3 +121,117 @@ In this example, we create a YAML file that has three parts.
 It is worth noting that, by specifying the inputs and outputs, Kubeflow pipelinne will track the inputs and outputs as [artifacts](https://www.kubeflow.org/docs/components/pipelines/overview/concepts/output-artifact/) in the Kubeflow pipeline UI.
 
 Now we have a component that is ready to be used in any pipelines. Please refer to the official [document](https://www.kubeflow.org/docs/components/pipelines/sdk/component-development/) for more information.
+
+## Reuse a Component in Pipeline
+
+Once a component definition YAML file is created, it can be reused in any pipelines. Common ways to do that are shown in the examples below.
+
+```python
+from kfp import components
+
+data_ingestion_op = components.load_component_from_file('./pipeline/data_ingestion/component.yaml')
+
+ingested_data = data_ingestion_op(url=url)
+```
+
+By loading the component, we created a container op. This container op can be called to be executed with the right input parameters. It is not necessary to store the component YAML file locally. We can load a component that is accessible via network as the following example.
+
+```python
+web_downloader_op = kfp.components.load_component_from_url(
+    'https://raw.githubusercontent.com/kubeflow/pipelines/master/components/web/Download/component.yaml')
+```
+
+The Kubernetes cluster should have access to the code repository and the image registry where the YAML file and the docker image of the component are stored. Otherwise, it will fail to pull the container and create a pipeline.
+
+There are some pitfalls to watch out for when creating and reusing a component:
+1. Kubeflow pipeline is built on top of [argo](https://argoproj.github.io). And [argo](https://argoproj.github.io) does not update containers that are already pulled and cached. To force a fresh pull and initialization of a pipeline step, you need to specify the [image pull policy](https://kubeflow-pipelines.readthedocs.io/en/latest/source/kfp.dsl.html) manually. This is very important when you are testing and debugging your own component image.
+```python
+ingested_data = data_ingestion_op(url=url)
+    ingested_data.container.set_image_pull_policy("Always")
+```
+2. Building and push a docker image is platform dependent. For example, if you build a docker image on a M1 mac then it will be based on arm instead of amd64 base image. And that will lead to unexpected bugs.
+3. The specification of the component interface in the YAML file can be counter intuitive sometimes. For example, component outputs could be inputs to the container command. 
+4. All output artifacts are stored in containers. When you specify the inputs and outputs of a component, Kubeflow will know where to look for it. So keep storing output files in container storage if you want Kubeflow to track it.
+
+## Build a Pipeline
+With components that are either publicly available or created by yourself, you are ready to create a pipeline now. We will show how to use Kubeflow DSL to create a pipeline.
+
+### Step 1: Load your components
+All components need to be loaded in advance to create container operations. As aforementioned, loading components from local YAML files or via online URI are fine.
+
+### Step 2: Define a pipeline
+With all components loaded, we can create a pipeline by calling the container ops.
+
+```python
+@dsl.pipeline(
+    name='Iris pipeline',
+    description='An example pipeline of training a classification model on the Iris dataset'
+)
+def iris_pipeline():
+    url = 'https://gist.githubusercontent.com/netj/8836201/raw/6f9306ad21398ea43cba4f7d537619d0e07d5ae3/iris.csv'
+    
+    ingested_data = data_ingestion_op(url=url)
+    ingested_data.container.set_image_pull_policy("Always")
+    ingested_data.execution_options.caching_strategy.max_cache_staleness = "P0D"
+    processed_data = data_preprocess_op(ingested_data=ingested_data.outputs['data'],
+                                        label_colname='variety'
+                                        )
+    processed_data.container.set_image_pull_policy("Always")
+    train_eval = train_eval_op(x_train=processed_data.outputs['x_train'],
+                                x_test=processed_data.outputs['x_test'],
+                                y_train=processed_data.outputs['y_train'],
+                                y_test=processed_data.outputs['y_test'],
+                                number_of_estimators=2
+                                )
+    train_eval.container.set_image_pull_policy("Always")
+```
+
+### Step 3: Run the Pipeline
+There are two ways to run the pipeline.
+1. Compile the pipeline python script into a YAML file and upload it to Kuberflow pipeline via UI.
+```python
+kfp.compiler.Compiler().compile(pipeline_func=iris_pipeline, package_path='pipeline.yaml')
+```
+2. If your local machine has access to the Kubeflow pipeline host, your can replace the compile code with a run call to submit the job directly.
+```python
+client = kfp.Client()
+client.create_run_from_pipeline_func(
+    iris_pipeline,
+    arguments={
+        'url': 'https://gist.githubusercontent.com/netj/8836201/raw/6f9306ad21398ea43cba4f7d537619d0e07d5ae3/iris.csv'
+    })
+```
+
+
+## Kubeflow Pipeline vs Airflow
+
+This is a good [reference](https://datatonic.com/insights/kubeflow-pipelines-cloud-composer-data-orchestration/) to read.
+
+One example of the perks with Kubeflow pipeline when it comes to ML experiments is the ability to track output artifacts. And by specifying metrics outputs, the results will be visualized automatically in Kubeflow pipeline UI. Below is an example of generating accuracy as output for tracking results.
+
+```python
+# Save metrics
+    p = pathlib.Path(mlpipeline_metrics_path)
+    metrics = {
+        'metrics': [
+            {
+            'name': 'accuracy_score',
+            'numberValue': accuracy_score(y_test, y_pred),
+            'format': "PERCENTAGE"
+            }
+        ]
+    }
+    if not p.exists(): p.parent.absolute().mkdir(parents=True, exist_ok=True)
+    with open(p, 'w') as f:
+        json.dump(metrics, f)
+```
+
+## Kubeflow Pipeline SDK V2
+
+New features are supported in [SDK V2](https://www.kubeflow.org/docs/components/pipelines/sdk/v2/v2-compatibility/). Most noticeably, it is no longer necessary to create docker containers to create components. Python functions can be directly wrapped into components for fast iteration.
+
+More to be tested since the APIs/documents are still in Beta.
+
+## Model Deployment
+
+Kubeflow pipeline's KFserving is now rebranded to be [KServe](https://github.com/kserve/kserve), which is a Kubernetes CRD. More POC effort is needed to further explore KServe and/or other model deployment options.
