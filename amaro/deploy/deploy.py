@@ -1,11 +1,13 @@
+#!/usr/bin/env python3
 import json
 import logging
+import argparse
 
 logging.basicConfig(format='%(asctime)s.%(msecs)03d %(levelname)s {%(module)s} [%(funcName)s : %(lineno)d] %(message)s', datefmt='%Y-%m-%d,%H:%M:%S', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 def load_metrics(metrics_file):
-	with open(metrics, 'r') as f:
+	with open(metrics_file, 'r') as f:
 		data = json.load(f)
 	return data
 
@@ -23,8 +25,8 @@ def eval_deploy(rf_metrics_file, xgb_metrics_file,
 	rf_metrics = load_metrics(rf_metrics_file)
 	xgb_metrics = load_metrics(xgb_metrics_file)
 
-	rf_score = float(rf_metrics['metrics'][0]['numberValue'])
-	xgb_score = float(xgb_metrics['metrics'][0]['numberValue'])
+	rf_score = float(rf_metrics['score'])
+	xgb_score = float(xgb_metrics['score'])
 	scores = [rf_score, xgb_score]
 	model_names = ["Random Forest", "XGBoost"]
 	models = [rf_model_file, xgb_model_file]

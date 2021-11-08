@@ -10,6 +10,7 @@ outputs:
 - {name: model file}
 - {name: MLPipeline Metrics, type: Metrics}
 - {name: mlpipeline-ui-metadata}
+- {name: test score}
 
 implementation:
   container:
@@ -21,5 +22,6 @@ implementation:
       --cv_results_file_path, {outputPath: cv results},
       --model_file_path, {outputPath: model file},
       --kfp_metrics_path, {outputPath: MLPipeline Metrics},
-      --mlpipeline_ui_metadata_path, {outputPath: mlpipeline-ui-metadata}
+      --mlpipeline_ui_metadata_path, {outputPath: mlpipeline-ui-metadata},
+      --test_score_path, {outputPath: test score}
     ]

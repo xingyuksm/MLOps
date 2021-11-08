@@ -41,10 +41,13 @@ def amarobot_pipeline():
 
 	# deploy model
 	deploy = amarobot_deploy_op(
-		rf_metrics=rf_model.outputs['MLPipeline Metrics'],
-		xgb_metrics=xgb_model.outputs['MLPipeline Metrics'],
-		rf_model=rf_model.outputs['model file'],
+		rf_metrics=rf_model.outputs['test_score'],
+		xgb_metrics=xgb_model.outputs['test_score'],
+		rf_model=rf_model.outputs['model_file'],
 		xgb_model=xgb_model.outputs['model_file']
 		)
+
+	deploy.container.set_image_pull_policy("Always")
+	deploy.execution_options.caching_strategy.max_cache_staleness = "P0D"
 
 kfp.compiler.Compiler().compile(pipeline_func=amarobot_pipeline, package_path='amarobot-pl.yaml')

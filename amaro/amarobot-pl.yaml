@@ -2,7 +2,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: Workflow
 metadata:
   generateName: amarobot-pipeline-
-  annotations: {pipelines.kubeflow.org/kfp_sdk_version: 1.8.1, pipelines.kubeflow.org/pipeline_compilation_time: '2021-11-08T13:36:23.010348',
+  annotations: {pipelines.kubeflow.org/kfp_sdk_version: 1.8.1, pipelines.kubeflow.org/pipeline_compilation_time: '2021-11-08T14:46:59.117340',
     pipelines.kubeflow.org/pipeline_spec: '{"description": "Train a classifier for
       identifying litigation texts", "name": "AMAROBot Pipeline"}'}
   labels: {pipelines.kubeflow.org/kfp_sdk_version: 1.8.1}
@@ -44,10 +44,47 @@ spec:
           "./data-preprocess/component.yaml"}', pipelines.kubeflow.org/arguments.parameters: '{"url":
           "https://raw.githubusercontent.com/xingyuksm/MLOps/main/amaro/data/batch_01_train.csv"}',
         pipelines.kubeflow.org/max_cache_staleness: P0D}
+  - name: amarobot-model-deploy
+    container:
+      args: []
+      command: [deploy.py, --rf_metrics_file, /tmp/inputs/rf_metrics/data, --xgb_metrics_file,
+        /tmp/inputs/xgb_metrics/data, --rf_model_file, /tmp/inputs/rf_model/data,
+        --xgb_model_file, /tmp/inputs/xgb_model/data]
+      image: xingyuusa/mlops-test:amaro-deploy
+      imagePullPolicy: Always
+    inputs:
+      artifacts:
+      - {name: amarobot-rf-model-test-score, path: /tmp/inputs/rf_metrics/data}
+      - {name: amarobot-rf-model-model-file, path: /tmp/inputs/rf_model/data}
+      - {name: amarobot-xgb-model-test-score, path: /tmp/inputs/xgb_metrics/data}
+      - {name: amarobot-xgb-model-model-file, path: /tmp/inputs/xgb_model/data}
+    metadata:
+      labels:
+        pipelines.kubeflow.org/kfp_sdk_version: 1.8.1
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+      annotations: {pipelines.kubeflow.org/component_spec: '{"description": "Compare
+          model performance and deploy the models.", "implementation": {"container":
+          {"command": ["deploy.py", "--rf_metrics_file", {"inputPath": "rf metrics"},
+          "--xgb_metrics_file", {"inputPath": "xgb metrics"}, "--rf_model_file", {"inputPath":
+          "rf model"}, "--xgb_model_file", {"inputPath": "xgb model"}], "image": "xingyuusa/mlops-test:amaro-deploy"}},
+          "inputs": [{"name": "rf metrics"}, {"name": "xgb metrics"}, {"name": "rf
+          model"}, {"name": "xgb model"}], "name": "Amarobot Model Deploy"}', pipelines.kubeflow.org/component_ref: '{"digest":
+          "8bd8688b37d557775260f87c490deeb313d6dd1d5d956188551d0661674f5ca0", "url":
+          "./deploy/component.yaml"}', pipelines.kubeflow.org/max_cache_staleness: P0D}
   - name: amarobot-pipeline
     dag:
       tasks:
       - {name: amarobot-data-preprocess, template: amarobot-data-preprocess}
+      - name: amarobot-model-deploy
+        template: amarobot-model-deploy
+        dependencies: [amarobot-rf-model, amarobot-xgb-model]
+        arguments:
+          artifacts:
+          - {name: amarobot-rf-model-model-file, from: '{{tasks.amarobot-rf-model.outputs.artifacts.amarobot-rf-model-model-file}}'}
+          - {name: amarobot-rf-model-test-score, from: '{{tasks.amarobot-rf-model.outputs.artifacts.amarobot-rf-model-test-score}}'}
+          - {name: amarobot-xgb-model-model-file, from: '{{tasks.amarobot-xgb-model.outputs.artifacts.amarobot-xgb-model-model-file}}'}
+          - {name: amarobot-xgb-model-test-score, from: '{{tasks.amarobot-xgb-model.outputs.artifacts.amarobot-xgb-model-test-score}}'}
       - name: amarobot-rf-model
         template: amarobot-rf-model
         dependencies: [amarobot-data-preprocess]
@@ -68,7 +105,8 @@ spec:
       command: [model.py, --features_file_path, /tmp/inputs/features/data, --labels,
         /tmp/inputs/labels/data, --cv_results_file_path, /tmp/outputs/cv_results/data,
         --model_file_path, /tmp/outputs/model_file/data, --kfp_metrics_path, /tmp/outputs/MLPipeline_Metrics/data,
-        --mlpipeline_ui_metadata_path, /tmp/outputs/mlpipeline-ui-metadata/data]
+        --mlpipeline_ui_metadata_path, /tmp/outputs/mlpipeline-ui-metadata/data, --test_score_path,
+        /tmp/outputs/test_score/data]
       image: xingyuusa/mlops-test:amaro-rf
       imagePullPolicy: Always
     inputs:
@@ -81,6 +119,7 @@ spec:
       - {name: mlpipeline-ui-metadata, path: /tmp/outputs/mlpipeline-ui-metadata/data}
       - {name: amarobot-rf-model-cv-results, path: /tmp/outputs/cv_results/data}
       - {name: amarobot-rf-model-model-file, path: /tmp/outputs/model_file/data}
+      - {name: amarobot-rf-model-test-score, path: /tmp/outputs/test_score/data}
     metadata:
       labels:
         pipelines.kubeflow.org/kfp_sdk_version: 1.8.1
@@ -92,11 +131,12 @@ spec:
           "features"}, "--labels", {"inputPath": "labels"}, "--cv_results_file_path",
           {"outputPath": "cv results"}, "--model_file_path", {"outputPath": "model
           file"}, "--kfp_metrics_path", {"outputPath": "MLPipeline Metrics"}, "--mlpipeline_ui_metadata_path",
-          {"outputPath": "mlpipeline-ui-metadata"}], "image": "xingyuusa/mlops-test:amaro-rf"}},
-          "inputs": [{"name": "features"}, {"name": "labels"}], "name": "AMAROBot
-          RF model", "outputs": [{"name": "cv results"}, {"name": "model file"}, {"name":
-          "MLPipeline Metrics", "type": "Metrics"}, {"name": "mlpipeline-ui-metadata"}]}',
-        pipelines.kubeflow.org/component_ref: '{"digest": "f255d0dae1b52e363fb0e53471ea4930cdca2b6b34b1b8651cfba4c251967d2a",
+          {"outputPath": "mlpipeline-ui-metadata"}, "--test_score_path", {"outputPath":
+          "test score"}], "image": "xingyuusa/mlops-test:amaro-rf"}}, "inputs": [{"name":
+          "features"}, {"name": "labels"}], "name": "AMAROBot RF model", "outputs":
+          [{"name": "cv results"}, {"name": "model file"}, {"name": "MLPipeline Metrics",
+          "type": "Metrics"}, {"name": "mlpipeline-ui-metadata"}, {"name": "test score"}]}',
+        pipelines.kubeflow.org/component_ref: '{"digest": "2c1ce3fc5c53ab28b412324d1335993234eb8442a7a6bb25aae742dea9b84cda",
           "url": "./train-rf/component.yaml"}', pipelines.kubeflow.org/max_cache_staleness: P0D}
   - name: amarobot-xgb-model
     container:
@@ -104,7 +144,8 @@ spec:
       command: [model.py, --features_file_path, /tmp/inputs/features/data, --labels,
         /tmp/inputs/labels/data, --cv_results_file_path, /tmp/outputs/cv_results/data,
         --model_file_path, /tmp/outputs/model_file/data, --kfp_metrics_path, /tmp/outputs/MLPipeline_Metrics/data,
-        --mlpipeline_ui_metadata_path, /tmp/outputs/mlpipeline-ui-metadata/data]
+        --mlpipeline_ui_metadata_path, /tmp/outputs/mlpipeline-ui-metadata/data, --test_score_path,
+        /tmp/outputs/test_score/data]
       image: xingyuusa/mlops-test:amaro-xgb
       imagePullPolicy: Always
     inputs:
@@ -117,6 +158,7 @@ spec:
       - {name: mlpipeline-ui-metadata, path: /tmp/outputs/mlpipeline-ui-metadata/data}
       - {name: amarobot-xgb-model-cv-results, path: /tmp/outputs/cv_results/data}
       - {name: amarobot-xgb-model-model-file, path: /tmp/outputs/model_file/data}
+      - {name: amarobot-xgb-model-test-score, path: /tmp/outputs/test_score/data}
     metadata:
       labels:
         pipelines.kubeflow.org/kfp_sdk_version: 1.8.1
@@ -128,11 +170,12 @@ spec:
           "--labels", {"inputPath": "labels"}, "--cv_results_file_path", {"outputPath":
           "cv results"}, "--model_file_path", {"outputPath": "model file"}, "--kfp_metrics_path",
           {"outputPath": "MLPipeline Metrics"}, "--mlpipeline_ui_metadata_path", {"outputPath":
-          "mlpipeline-ui-metadata"}], "image": "xingyuusa/mlops-test:amaro-xgb"}},
-          "inputs": [{"name": "features"}, {"name": "labels"}], "name": "AMAROBot
-          XGB model", "outputs": [{"name": "cv results"}, {"name": "model file"},
-          {"name": "MLPipeline Metrics", "type": "Metrics"}, {"name": "mlpipeline-ui-metadata"}]}',
-        pipelines.kubeflow.org/component_ref: '{"digest": "5995391542b508c614572968a0a1ddae75490e4ec3b9cf7f58fecae49b8062c8",
+          "mlpipeline-ui-metadata"}, "--test_score_path", {"outputPath": "test score"}],
+          "image": "xingyuusa/mlops-test:amaro-xgb"}}, "inputs": [{"name": "features"},
+          {"name": "labels"}], "name": "AMAROBot XGB model", "outputs": [{"name":
+          "cv results"}, {"name": "model file"}, {"name": "MLPipeline Metrics", "type":
+          "Metrics"}, {"name": "mlpipeline-ui-metadata"}, {"name": "test score"}]}',
+        pipelines.kubeflow.org/component_ref: '{"digest": "2a7e670dca2437e96cdea233e9635a857e217cd42dead24204871eade2ebdc46",
           "url": "./train-xgb/component.yaml"}', pipelines.kubeflow.org/max_cache_staleness: P0D}
   arguments:
     parameters: []

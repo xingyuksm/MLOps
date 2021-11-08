@@ -38,6 +38,7 @@ def train(X, y,
     model_save_path,
     mlpipeline_metrics_path,
     mlpipeline_ui_metadata_path,
+    test_score_path,
     test_size=0.3):
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, stratify=y)
@@ -110,7 +111,10 @@ def train(X, y,
         json.dump(metrics, f)
 
     logger.info(f"Test score is {accuracy_score(y_test, y_pred)}")
-
+    test_score = {'score': accuracy_score(y_test, y_pred)}
+    _check_path(test_score_path)
+    with open(test_score_path, 'w') as f:
+        json.dump(test_score, f)
 
 if __name__ == "__main__":
     try:
@@ -123,6 +127,7 @@ if __name__ == "__main__":
         parser.add_argument('--model_file_path', type=str, action='store')
         parser.add_argument('--kfp_metrics_path', type=str, action='store')
         parser.add_argument('--mlpipeline_ui_metadata_path', type=str, action='store')
+        parser.add_argument('--test_score_path', type=str, action='store')
 
         FLAGS = parser.parse_args()
 
@@ -131,7 +136,8 @@ if __name__ == "__main__":
             FLAGS.cv_results_file_path,
             FLAGS.model_file_path,
             FLAGS.kfp_metrics_path, 
-            FLAGS.mlpipeline_ui_metadata_path
+            FLAGS.mlpipeline_ui_metadata_path,
+            FLAGS.test_score_path
             )
 
     except Exception as e:
