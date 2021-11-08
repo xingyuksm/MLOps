@@ -2,7 +2,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: Workflow
 metadata:
   generateName: amarobot-pipeline-
-  annotations: {pipelines.kubeflow.org/kfp_sdk_version: 1.8.1, pipelines.kubeflow.org/pipeline_compilation_time: '2021-11-08T11:30:10.012579',
+  annotations: {pipelines.kubeflow.org/kfp_sdk_version: 1.8.1, pipelines.kubeflow.org/pipeline_compilation_time: '2021-11-08T13:36:23.010348',
     pipelines.kubeflow.org/pipeline_spec: '{"description": "Train a classifier for
       identifying litigation texts", "name": "AMAROBot Pipeline"}'}
   labels: {pipelines.kubeflow.org/kfp_sdk_version: 1.8.1}
@@ -14,11 +14,13 @@ spec:
       args: []
       command: [preprocess.py, --url, 'https://raw.githubusercontent.com/xingyuksm/MLOps/main/amaro/data/batch_01_train.csv',
         --output_path, /tmp/outputs/data/data, --features_save_path, /tmp/outputs/features/data,
-        --labels_save_path, /tmp/outputs/labels/data]
+        --labels_save_path, /tmp/outputs/labels/data, --mlpipeline_ui_metadata_path,
+        /tmp/outputs/mlpipeline-ui-metadata/data]
       image: xingyuusa/mlops-test:amaro-preprocess
       imagePullPolicy: Always
     outputs:
       artifacts:
+      - {name: mlpipeline-ui-metadata, path: /tmp/outputs/mlpipeline-ui-metadata/data}
       - {name: amarobot-data-preprocess-data, path: /tmp/outputs/data/data}
       - {name: amarobot-data-preprocess-features, path: /tmp/outputs/features/data}
       - {name: amarobot-data-preprocess-labels, path: /tmp/outputs/labels/data}
@@ -31,14 +33,17 @@ spec:
           and preprocess AMAROBot training data from MTurk.", "implementation": {"container":
           {"command": ["preprocess.py", "--url", {"inputValue": "url"}, "--output_path",
           {"outputPath": "data"}, "--features_save_path", {"outputPath": "features"},
-          "--labels_save_path", {"outputPath": "labels"}], "image": "xingyuusa/mlops-test:amaro-preprocess"}},
+          "--labels_save_path", {"outputPath": "labels"}, "--mlpipeline_ui_metadata_path",
+          {"outputPath": "mlpipeline-ui-metadata"}], "image": "xingyuusa/mlops-test:amaro-preprocess"}},
           "inputs": [{"description": "The URL to ingest the Iris data from", "name":
           "url", "type": "String"}], "name": "Amarobot Data Preprocess", "outputs":
           [{"description": "Ingested CSV file", "name": "data", "type": "String"},
-          {"name": "features", "type": "String"}, {"name": "labels", "type": "String"}]}',
-        pipelines.kubeflow.org/component_ref: '{"digest": "ede8274f9a1391e8aa0bb319afd74e08e220c410d2db4869e349ad074445e58b",
-          "url": "./data-preprocess/component.yaml"}', pipelines.kubeflow.org/arguments.parameters: '{"url":
-          "https://raw.githubusercontent.com/xingyuksm/MLOps/main/amaro/data/batch_01_train.csv"}'}
+          {"name": "features", "type": "String"}, {"name": "labels", "type": "String"},
+          {"name": "mlpipeline-ui-metadata"}]}', pipelines.kubeflow.org/component_ref: '{"digest":
+          "3a8d1abeeaa1b0ba7d47c39663ca5cec4a148c79f1b6b64e7a3ad5d3f0a4d1fb", "url":
+          "./data-preprocess/component.yaml"}', pipelines.kubeflow.org/arguments.parameters: '{"url":
+          "https://raw.githubusercontent.com/xingyuksm/MLOps/main/amaro/data/batch_01_train.csv"}',
+        pipelines.kubeflow.org/max_cache_staleness: P0D}
   - name: amarobot-pipeline
     dag:
       tasks:
@@ -62,7 +67,8 @@ spec:
       args: []
       command: [model.py, --features_file_path, /tmp/inputs/features/data, --labels,
         /tmp/inputs/labels/data, --cv_results_file_path, /tmp/outputs/cv_results/data,
-        --model_file_path, /tmp/outputs/model_file/data, --kfp_metrics_path, /tmp/outputs/MLPipeline_Metrics/data]
+        --model_file_path, /tmp/outputs/model_file/data, --kfp_metrics_path, /tmp/outputs/MLPipeline_Metrics/data,
+        --mlpipeline_ui_metadata_path, /tmp/outputs/mlpipeline-ui-metadata/data]
       image: xingyuusa/mlops-test:amaro-rf
       imagePullPolicy: Always
     inputs:
@@ -72,6 +78,7 @@ spec:
     outputs:
       artifacts:
       - {name: mlpipeline-metrics, path: /tmp/outputs/MLPipeline_Metrics/data}
+      - {name: mlpipeline-ui-metadata, path: /tmp/outputs/mlpipeline-ui-metadata/data}
       - {name: amarobot-rf-model-cv-results, path: /tmp/outputs/cv_results/data}
       - {name: amarobot-rf-model-model-file, path: /tmp/outputs/model_file/data}
     metadata:
@@ -84,18 +91,20 @@ spec:
           {"container": {"command": ["model.py", "--features_file_path", {"inputPath":
           "features"}, "--labels", {"inputPath": "labels"}, "--cv_results_file_path",
           {"outputPath": "cv results"}, "--model_file_path", {"outputPath": "model
-          file"}, "--kfp_metrics_path", {"outputPath": "MLPipeline Metrics"}], "image":
-          "xingyuusa/mlops-test:amaro-rf"}}, "inputs": [{"name": "features"}, {"name":
-          "labels"}], "name": "AMAROBot RF model", "outputs": [{"name": "cv results"},
-          {"name": "model file"}, {"name": "MLPipeline Metrics", "type": "Metrics"}]}',
-        pipelines.kubeflow.org/component_ref: '{"digest": "f6762b111b33420dfd9c8f13cfe0c103b55c9bbf4f0e8c8d12bf33bfbd157d75",
-          "url": "./train-rf/component.yaml"}'}
+          file"}, "--kfp_metrics_path", {"outputPath": "MLPipeline Metrics"}, "--mlpipeline_ui_metadata_path",
+          {"outputPath": "mlpipeline-ui-metadata"}], "image": "xingyuusa/mlops-test:amaro-rf"}},
+          "inputs": [{"name": "features"}, {"name": "labels"}], "name": "AMAROBot
+          RF model", "outputs": [{"name": "cv results"}, {"name": "model file"}, {"name":
+          "MLPipeline Metrics", "type": "Metrics"}, {"name": "mlpipeline-ui-metadata"}]}',
+        pipelines.kubeflow.org/component_ref: '{"digest": "f255d0dae1b52e363fb0e53471ea4930cdca2b6b34b1b8651cfba4c251967d2a",
+          "url": "./train-rf/component.yaml"}', pipelines.kubeflow.org/max_cache_staleness: P0D}
   - name: amarobot-xgb-model
     container:
       args: []
       command: [model.py, --features_file_path, /tmp/inputs/features/data, --labels,
         /tmp/inputs/labels/data, --cv_results_file_path, /tmp/outputs/cv_results/data,
-        --model_file_path, /tmp/outputs/model_file/data, --kfp_metrics_path, /tmp/outputs/MLPipeline_Metrics/data]
+        --model_file_path, /tmp/outputs/model_file/data, --kfp_metrics_path, /tmp/outputs/MLPipeline_Metrics/data,
+        --mlpipeline_ui_metadata_path, /tmp/outputs/mlpipeline-ui-metadata/data]
       image: xingyuusa/mlops-test:amaro-xgb
       imagePullPolicy: Always
     inputs:
@@ -105,6 +114,7 @@ spec:
     outputs:
       artifacts:
       - {name: mlpipeline-metrics, path: /tmp/outputs/MLPipeline_Metrics/data}
+      - {name: mlpipeline-ui-metadata, path: /tmp/outputs/mlpipeline-ui-metadata/data}
       - {name: amarobot-xgb-model-cv-results, path: /tmp/outputs/cv_results/data}
       - {name: amarobot-xgb-model-model-file, path: /tmp/outputs/model_file/data}
     metadata:
@@ -117,12 +127,13 @@ spec:
           {"command": ["model.py", "--features_file_path", {"inputPath": "features"},
           "--labels", {"inputPath": "labels"}, "--cv_results_file_path", {"outputPath":
           "cv results"}, "--model_file_path", {"outputPath": "model file"}, "--kfp_metrics_path",
-          {"outputPath": "MLPipeline Metrics"}], "image": "xingyuusa/mlops-test:amaro-xgb"}},
+          {"outputPath": "MLPipeline Metrics"}, "--mlpipeline_ui_metadata_path", {"outputPath":
+          "mlpipeline-ui-metadata"}], "image": "xingyuusa/mlops-test:amaro-xgb"}},
           "inputs": [{"name": "features"}, {"name": "labels"}], "name": "AMAROBot
           XGB model", "outputs": [{"name": "cv results"}, {"name": "model file"},
-          {"name": "MLPipeline Metrics", "type": "Metrics"}]}', pipelines.kubeflow.org/component_ref: '{"digest":
-          "ef6c59cbb2d7907b990032ca6eaef02238589f9d9c90ccbf01a3d0035868df8d", "url":
-          "./train-xgb/component.yaml"}'}
+          {"name": "MLPipeline Metrics", "type": "Metrics"}, {"name": "mlpipeline-ui-metadata"}]}',
+        pipelines.kubeflow.org/component_ref: '{"digest": "5995391542b508c614572968a0a1ddae75490e4ec3b9cf7f58fecae49b8062c8",
+          "url": "./train-xgb/component.yaml"}', pipelines.kubeflow.org/max_cache_staleness: P0D}
   arguments:
     parameters: []
   serviceAccountName: pipeline-runner

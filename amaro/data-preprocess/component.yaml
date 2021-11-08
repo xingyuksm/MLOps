@@ -8,6 +8,7 @@ outputs:
 - {name: data, type: String, description: 'Ingested CSV file'}
 - {name: features, type: String}
 - {name: labels, type: String}
+- {name: mlpipeline-ui-metadata}
 
 implementation:
   container:
@@ -17,5 +18,6 @@ implementation:
       --url, {inputValue: url},
       --output_path, {outputPath: data},
       --features_save_path, {outputPath: features},
-      --labels_save_path, {outputPath: labels}
+      --labels_save_path, {outputPath: labels},
+      --mlpipeline_ui_metadata_path, {outputPath: mlpipeline-ui-metadata}
     ]

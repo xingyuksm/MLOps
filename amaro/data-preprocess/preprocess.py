@@ -10,6 +10,7 @@ from matplotlib.lines import Line2D
 import numpy as np
 import spacy
 import logging
+import json
 
 nlp = spacy.load("en_core_web_lg")
 pd.set_option('display.max_colwidth', None)
@@ -67,7 +68,7 @@ def data_exploration(df):
 
     return df
 
-def stats_gen(df):
+def stats_gen(df, mlpipeline_ui_metadata_path):
 
     ret = {
         'n_example': df.shape[0],
@@ -79,6 +80,21 @@ def stats_gen(df):
     }
     logger.info("Data statitics:")
     logger.info(ret)
+
+    data = pd.DataFrame([ret])
+    _check_path(mlpipeline_ui_metadata_path)
+    metadata = {
+        'outputs' : [{
+            'type': 'table',
+            'storage': 'inline',
+            'format': 'csv',
+            'header': ['idx'] + list(data.columns.values),
+            'source': data.to_csv(header=False)
+        }]
+    }
+    with open(mlpipeline_ui_metadata_path, 'w') as f:
+        json.dump(metadata, f)
+
     return ret
 
 def n_token_hist(df, save_path):
@@ -150,14 +166,14 @@ if __name__ == "__main__":
         #parser.add_argument('--embed_plot_path', type=str, action='store')
         parser.add_argument('--features_save_path', type=str, action='store')
         parser.add_argument('--labels_save_path', type=str, action='store')
-
+        parser.add_argument('--mlpipeline_ui_metadata_path', type=str, action='store')
         FLAGS = parser.parse_args()
 
         # Call the data_ingestion function
         logger.info("Ingesting data:")
         df = data_ingestion(FLAGS.url, FLAGS.output_path)
         df = data_exploration(df)
-        stats = stats_gen(df)
+        stats = stats_gen(df, FLAGS.mlpipeline_ui_metadata_path)
         #n_token_hist(df, FLAGS.hist_path)
         #embed_plot(df, FLAGS.embed_plot_path, n_components=3)
         save_data(df, FLAGS.features_save_path, FLAGS.labels_save_path)

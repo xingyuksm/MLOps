@@ -18,6 +18,8 @@ def amarobot_pipeline():
 	data_preprocessor = amarobot_preprocess_op(
 		url=data_url)
 	data_preprocessor.container.set_image_pull_policy("Always")
+	data_preprocessor.execution_options.caching_strategy.max_cache_staleness = "P0D"
+
 
 	# Train and compare models
 	xgb_model = amarobot_xgb_op(
@@ -26,6 +28,7 @@ def amarobot_pipeline():
 		)
 
 	xgb_model.container.set_image_pull_policy("Always")
+	xgb_model.execution_options.caching_strategy.max_cache_staleness = "P0D"
 
 	rf_model = amarobot_rf_op(
 		features=data_preprocessor.outputs['features'],
@@ -33,5 +36,6 @@ def amarobot_pipeline():
 		)
 
 	rf_model.container.set_image_pull_policy("Always")
+	rf_model.execution_options.caching_strategy.max_cache_staleness = "P0D"
 
 kfp.compiler.Compiler().compile(pipeline_func=amarobot_pipeline, package_path='amarobot-pl.yaml')

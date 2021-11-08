@@ -37,6 +37,7 @@ def train(X, y,
     cv_results_file_path, 
     model_save_path,
     mlpipeline_metrics_path,
+    mlpipeline_ui_metadata_path,
     test_size=0.3):
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, stratify=y)
@@ -73,8 +74,21 @@ def train(X, y,
     logger.info(f"Model: {estimator}")
     logger.info(f"Best CV score is {best_score}")
     logger.info(f"Best parameters are {best_params}")
-    
 
+    # Viz of cv results
+    _check_path(mlpipeline_ui_metadata_path)
+    metadata = {
+        'outputs' : [{
+            'type': 'table',
+            'storage': 'inline',
+            'format': 'csv',
+            'header': ['idx'] + list(cv_results.columns.values),
+            'source': cv_results.to_csv(header=False)
+        }]
+    }
+    with open(mlpipeline_ui_metadata_path, 'w') as f:
+        json.dump(metadata, f)
+    
     # Save model
     _check_path(model_save_path)
     pickle.dump(best_model, open(model_save_path, 'wb'))
@@ -108,6 +122,7 @@ if __name__ == "__main__":
         parser.add_argument('--cv_results_file_path', type=str, action='store')
         parser.add_argument('--model_file_path', type=str, action='store')
         parser.add_argument('--kfp_metrics_path', type=str, action='store')
+        parser.add_argument('--mlpipeline_ui_metadata_path', type=str, action='store')
 
         FLAGS = parser.parse_args()
 
@@ -115,7 +130,9 @@ if __name__ == "__main__":
         train(X, y, 
             FLAGS.cv_results_file_path,
             FLAGS.model_file_path,
-            FLAGS.kfp_metrics_path)
+            FLAGS.kfp_metrics_path, 
+            FLAGS.mlpipeline_ui_metadata_path
+            )
 
     except Exception as e:
         logger.exception(e)
