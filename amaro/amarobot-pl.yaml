@@ -2,7 +2,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: Workflow
 metadata:
   generateName: amarobot-pipeline-
-  annotations: {pipelines.kubeflow.org/kfp_sdk_version: 1.8.1, pipelines.kubeflow.org/pipeline_compilation_time: '2021-11-08T10:38:45.435525',
+  annotations: {pipelines.kubeflow.org/kfp_sdk_version: 1.8.1, pipelines.kubeflow.org/pipeline_compilation_time: '2021-11-08T11:30:10.012579',
     pipelines.kubeflow.org/pipeline_spec: '{"description": "Train a classifier for
       identifying litigation texts", "name": "AMAROBot Pipeline"}'}
   labels: {pipelines.kubeflow.org/kfp_sdk_version: 1.8.1}
@@ -13,8 +13,7 @@ spec:
     container:
       args: []
       command: [preprocess.py, --url, 'https://raw.githubusercontent.com/xingyuksm/MLOps/main/amaro/data/batch_01_train.csv',
-        --output_path, /tmp/outputs/data/data, --hist_path, /tmp/outputs/histogram/data,
-        --embed_plot_path, /tmp/outputs/scatter/data, --features_save_path, /tmp/outputs/features/data,
+        --output_path, /tmp/outputs/data/data, --features_save_path, /tmp/outputs/features/data,
         --labels_save_path, /tmp/outputs/labels/data]
       image: xingyuusa/mlops-test:amaro-preprocess
       imagePullPolicy: Always
@@ -22,9 +21,7 @@ spec:
       artifacts:
       - {name: amarobot-data-preprocess-data, path: /tmp/outputs/data/data}
       - {name: amarobot-data-preprocess-features, path: /tmp/outputs/features/data}
-      - {name: amarobot-data-preprocess-histogram, path: /tmp/outputs/histogram/data}
       - {name: amarobot-data-preprocess-labels, path: /tmp/outputs/labels/data}
-      - {name: amarobot-data-preprocess-scatter, path: /tmp/outputs/scatter/data}
     metadata:
       labels:
         pipelines.kubeflow.org/kfp_sdk_version: 1.8.1
@@ -33,15 +30,13 @@ spec:
       annotations: {pipelines.kubeflow.org/component_spec: '{"description": "Explore
           and preprocess AMAROBot training data from MTurk.", "implementation": {"container":
           {"command": ["preprocess.py", "--url", {"inputValue": "url"}, "--output_path",
-          {"outputPath": "data"}, "--hist_path", {"outputPath": "histogram"}, "--embed_plot_path",
-          {"outputPath": "scatter"}, "--features_save_path", {"outputPath": "features"},
+          {"outputPath": "data"}, "--features_save_path", {"outputPath": "features"},
           "--labels_save_path", {"outputPath": "labels"}], "image": "xingyuusa/mlops-test:amaro-preprocess"}},
           "inputs": [{"description": "The URL to ingest the Iris data from", "name":
           "url", "type": "String"}], "name": "Amarobot Data Preprocess", "outputs":
           [{"description": "Ingested CSV file", "name": "data", "type": "String"},
-          {"name": "histogram", "type": "String"}, {"name": "scatter", "type": "String"},
           {"name": "features", "type": "String"}, {"name": "labels", "type": "String"}]}',
-        pipelines.kubeflow.org/component_ref: '{"digest": "c5a7be7bec9de28370647b4b49f3cd617ab6da7744b17debf34f2d8609ed7f23",
+        pipelines.kubeflow.org/component_ref: '{"digest": "ede8274f9a1391e8aa0bb319afd74e08e220c410d2db4869e349ad074445e58b",
           "url": "./data-preprocess/component.yaml"}', pipelines.kubeflow.org/arguments.parameters: '{"url":
           "https://raw.githubusercontent.com/xingyuksm/MLOps/main/amaro/data/batch_01_train.csv"}'}
   - name: amarobot-pipeline

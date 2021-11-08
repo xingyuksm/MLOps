@@ -6,8 +6,6 @@ inputs:
 
 outputs:
 - {name: data, type: String, description: 'Ingested CSV file'}
-- {name: histogram, type: String}
-- {name: scatter, type: String}
 - {name: features, type: String}
 - {name: labels, type: String}
 
@@ -18,8 +16,6 @@ implementation:
       preprocess.py,
       --url, {inputValue: url},
       --output_path, {outputPath: data},
-      --hist_path, {outputPath: histogram},
-      --embed_plot_path, {outputPath: scatter},
       --features_save_path, {outputPath: features},
       --labels_save_path, {outputPath: labels}
     ]

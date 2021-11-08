@@ -146,8 +146,8 @@ if __name__ == "__main__":
         parser = argparse.ArgumentParser()
         parser.add_argument('--url', type=str, action='store')
         parser.add_argument('--output_path', type=str, action='store')
-        parser.add_argument('--hist_path', type=str, action='store')
-        parser.add_argument('--embed_plot_path', type=str, action='store')
+        #parser.add_argument('--hist_path', type=str, action='store')
+        #parser.add_argument('--embed_plot_path', type=str, action='store')
         parser.add_argument('--features_save_path', type=str, action='store')
         parser.add_argument('--labels_save_path', type=str, action='store')
 
@@ -158,8 +158,8 @@ if __name__ == "__main__":
         df = data_ingestion(FLAGS.url, FLAGS.output_path)
         df = data_exploration(df)
         stats = stats_gen(df)
-        n_token_hist(df, FLAGS.hist_path)
-        embed_plot(df, FLAGS.embed_plot_path, n_components=3)
+        #n_token_hist(df, FLAGS.hist_path)
+        #embed_plot(df, FLAGS.embed_plot_path, n_components=3)
         save_data(df, FLAGS.features_save_path, FLAGS.labels_save_path)
 
     except Exception as e:
