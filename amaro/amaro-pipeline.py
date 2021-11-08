@@ -5,6 +5,7 @@ from kfp import dsl
 amarobot_preprocess_op = components.load_component_from_file('./data-preprocess/component.yaml')
 amarobot_xgb_op = components.load_component_from_file('./train-xgb/component.yaml')
 amarobot_rf_op = components.load_component_from_file('./train-rf/component.yaml')
+amarobot_deploy_op = components.load_component_from_file('./deploy/component.yaml')
 
 @dsl.pipeline(
 	name='AMAROBot Pipeline',
@@ -37,5 +38,13 @@ def amarobot_pipeline():
 
 	rf_model.container.set_image_pull_policy("Always")
 	rf_model.execution_options.caching_strategy.max_cache_staleness = "P0D"
+
+	# deploy model
+	deploy = amarobot_deploy_op(
+		rf_metrics=rf_model.outputs['MLPipeline Metrics'],
+		xgb_metrics=xgb_model.outputs['MLPipeline Metrics'],
+		rf_model=rf_model.outputs['model file'],
+		xgb_model=xgb_model.outputs['model_file']
+		)
 
 kfp.compiler.Compiler().compile(pipeline_func=amarobot_pipeline, package_path='amarobot-pl.yaml')

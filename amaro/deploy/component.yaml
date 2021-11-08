@@ -1,0 +1,21 @@
+name: Amarobot Model Deploy
+description: Compare model performance and deploy the models.
+
+inputs:
+- {name: rf metrics}
+- {name: xgb metrics}
+- {name: rf model}
+- {name: xgb model}
+
+outputs:
+
+implementation:
+  container:
+    image: xingyuusa/mlops-test:amaro-deploy
+    command: [
+      deploy.py,
+      --rf_metrics_file, {inputPath: rf metrics},
+      --xgb_metrics_file, {inputPath: xgb metrics},
+      --rf_model_file, {inputPath: rf model},
+      --xgb_model_file, {inputPath: xgb model}    
+    ]
