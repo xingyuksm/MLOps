@@ -1,0 +1,25 @@
+name: Amarobot Data Preprocess
+description: Explore and preprocess AMAROBot training data from MTurk.
+
+inputs:
+- {name: url, type: String, description: 'The URL to ingest the Iris data from'}
+
+outputs:
+- {name: data, type: String, description: 'Ingested CSV file'}
+- {name: histogram, type: String}
+- {name: scatter, type: String}
+- {name: features, type: String}
+- {name: labels, type: String}
+
+implementation:
+  container:
+    image: xingyuusa/mlops-test:amaro-preprocess
+    command: [
+      preprocess.py,
+      --url, {inputValue: url},
+      --output_path, {outputPath: data},
+      --hist_path, {outputPath: histogram},
+      --embed_plot_path, {outputPath: scatter},
+      --features_save_path, {outputPath: features},
+      --labels_save_path, {outputPath: labels}
+    ]

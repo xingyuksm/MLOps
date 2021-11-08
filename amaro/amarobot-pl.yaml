@@ -1,0 +1,133 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: amarobot-pipeline-
+  annotations: {pipelines.kubeflow.org/kfp_sdk_version: 1.8.1, pipelines.kubeflow.org/pipeline_compilation_time: '2021-11-08T10:38:45.435525',
+    pipelines.kubeflow.org/pipeline_spec: '{"description": "Train a classifier for
+      identifying litigation texts", "name": "AMAROBot Pipeline"}'}
+  labels: {pipelines.kubeflow.org/kfp_sdk_version: 1.8.1}
+spec:
+  entrypoint: amarobot-pipeline
+  templates:
+  - name: amarobot-data-preprocess
+    container:
+      args: []
+      command: [preprocess.py, --url, 'https://raw.githubusercontent.com/xingyuksm/MLOps/main/amaro/data/batch_01_train.csv',
+        --output_path, /tmp/outputs/data/data, --hist_path, /tmp/outputs/histogram/data,
+        --embed_plot_path, /tmp/outputs/scatter/data, --features_save_path, /tmp/outputs/features/data,
+        --labels_save_path, /tmp/outputs/labels/data]
+      image: xingyuusa/mlops-test:amaro-preprocess
+      imagePullPolicy: Always
+    outputs:
+      artifacts:
+      - {name: amarobot-data-preprocess-data, path: /tmp/outputs/data/data}
+      - {name: amarobot-data-preprocess-features, path: /tmp/outputs/features/data}
+      - {name: amarobot-data-preprocess-histogram, path: /tmp/outputs/histogram/data}
+      - {name: amarobot-data-preprocess-labels, path: /tmp/outputs/labels/data}
+      - {name: amarobot-data-preprocess-scatter, path: /tmp/outputs/scatter/data}
+    metadata:
+      labels:
+        pipelines.kubeflow.org/kfp_sdk_version: 1.8.1
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+      annotations: {pipelines.kubeflow.org/component_spec: '{"description": "Explore
+          and preprocess AMAROBot training data from MTurk.", "implementation": {"container":
+          {"command": ["preprocess.py", "--url", {"inputValue": "url"}, "--output_path",
+          {"outputPath": "data"}, "--hist_path", {"outputPath": "histogram"}, "--embed_plot_path",
+          {"outputPath": "scatter"}, "--features_save_path", {"outputPath": "features"},
+          "--labels_save_path", {"outputPath": "labels"}], "image": "xingyuusa/mlops-test:amaro-preprocess"}},
+          "inputs": [{"description": "The URL to ingest the Iris data from", "name":
+          "url", "type": "String"}], "name": "Amarobot Data Preprocess", "outputs":
+          [{"description": "Ingested CSV file", "name": "data", "type": "String"},
+          {"name": "histogram", "type": "String"}, {"name": "scatter", "type": "String"},
+          {"name": "features", "type": "String"}, {"name": "labels", "type": "String"}]}',
+        pipelines.kubeflow.org/component_ref: '{"digest": "c5a7be7bec9de28370647b4b49f3cd617ab6da7744b17debf34f2d8609ed7f23",
+          "url": "./data-preprocess/component.yaml"}', pipelines.kubeflow.org/arguments.parameters: '{"url":
+          "https://raw.githubusercontent.com/xingyuksm/MLOps/main/amaro/data/batch_01_train.csv"}'}
+  - name: amarobot-pipeline
+    dag:
+      tasks:
+      - {name: amarobot-data-preprocess, template: amarobot-data-preprocess}
+      - name: amarobot-rf-model
+        template: amarobot-rf-model
+        dependencies: [amarobot-data-preprocess]
+        arguments:
+          artifacts:
+          - {name: amarobot-data-preprocess-features, from: '{{tasks.amarobot-data-preprocess.outputs.artifacts.amarobot-data-preprocess-features}}'}
+          - {name: amarobot-data-preprocess-labels, from: '{{tasks.amarobot-data-preprocess.outputs.artifacts.amarobot-data-preprocess-labels}}'}
+      - name: amarobot-xgb-model
+        template: amarobot-xgb-model
+        dependencies: [amarobot-data-preprocess]
+        arguments:
+          artifacts:
+          - {name: amarobot-data-preprocess-features, from: '{{tasks.amarobot-data-preprocess.outputs.artifacts.amarobot-data-preprocess-features}}'}
+          - {name: amarobot-data-preprocess-labels, from: '{{tasks.amarobot-data-preprocess.outputs.artifacts.amarobot-data-preprocess-labels}}'}
+  - name: amarobot-rf-model
+    container:
+      args: []
+      command: [model.py, --features_file_path, /tmp/inputs/features/data, --labels,
+        /tmp/inputs/labels/data, --cv_results_file_path, /tmp/outputs/cv_results/data,
+        --model_file_path, /tmp/outputs/model_file/data, --kfp_metrics_path, /tmp/outputs/MLPipeline_Metrics/data]
+      image: xingyuusa/mlops-test:amaro-rf
+      imagePullPolicy: Always
+    inputs:
+      artifacts:
+      - {name: amarobot-data-preprocess-features, path: /tmp/inputs/features/data}
+      - {name: amarobot-data-preprocess-labels, path: /tmp/inputs/labels/data}
+    outputs:
+      artifacts:
+      - {name: mlpipeline-metrics, path: /tmp/outputs/MLPipeline_Metrics/data}
+      - {name: amarobot-rf-model-cv-results, path: /tmp/outputs/cv_results/data}
+      - {name: amarobot-rf-model-model-file, path: /tmp/outputs/model_file/data}
+    metadata:
+      labels:
+        pipelines.kubeflow.org/kfp_sdk_version: 1.8.1
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+      annotations: {pipelines.kubeflow.org/component_spec: '{"description": "Trains
+          a random forest classifier for the AMAROBot dataset", "implementation":
+          {"container": {"command": ["model.py", "--features_file_path", {"inputPath":
+          "features"}, "--labels", {"inputPath": "labels"}, "--cv_results_file_path",
+          {"outputPath": "cv results"}, "--model_file_path", {"outputPath": "model
+          file"}, "--kfp_metrics_path", {"outputPath": "MLPipeline Metrics"}], "image":
+          "xingyuusa/mlops-test:amaro-rf"}}, "inputs": [{"name": "features"}, {"name":
+          "labels"}], "name": "AMAROBot RF model", "outputs": [{"name": "cv results"},
+          {"name": "model file"}, {"name": "MLPipeline Metrics", "type": "Metrics"}]}',
+        pipelines.kubeflow.org/component_ref: '{"digest": "f6762b111b33420dfd9c8f13cfe0c103b55c9bbf4f0e8c8d12bf33bfbd157d75",
+          "url": "./train-rf/component.yaml"}'}
+  - name: amarobot-xgb-model
+    container:
+      args: []
+      command: [model.py, --features_file_path, /tmp/inputs/features/data, --labels,
+        /tmp/inputs/labels/data, --cv_results_file_path, /tmp/outputs/cv_results/data,
+        --model_file_path, /tmp/outputs/model_file/data, --kfp_metrics_path, /tmp/outputs/MLPipeline_Metrics/data]
+      image: xingyuusa/mlops-test:amaro-xgb
+      imagePullPolicy: Always
+    inputs:
+      artifacts:
+      - {name: amarobot-data-preprocess-features, path: /tmp/inputs/features/data}
+      - {name: amarobot-data-preprocess-labels, path: /tmp/inputs/labels/data}
+    outputs:
+      artifacts:
+      - {name: mlpipeline-metrics, path: /tmp/outputs/MLPipeline_Metrics/data}
+      - {name: amarobot-xgb-model-cv-results, path: /tmp/outputs/cv_results/data}
+      - {name: amarobot-xgb-model-model-file, path: /tmp/outputs/model_file/data}
+    metadata:
+      labels:
+        pipelines.kubeflow.org/kfp_sdk_version: 1.8.1
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+      annotations: {pipelines.kubeflow.org/component_spec: '{"description": "Trains
+          a XGB classifier for the AMAROBot dataset", "implementation": {"container":
+          {"command": ["model.py", "--features_file_path", {"inputPath": "features"},
+          "--labels", {"inputPath": "labels"}, "--cv_results_file_path", {"outputPath":
+          "cv results"}, "--model_file_path", {"outputPath": "model file"}, "--kfp_metrics_path",
+          {"outputPath": "MLPipeline Metrics"}], "image": "xingyuusa/mlops-test:amaro-xgb"}},
+          "inputs": [{"name": "features"}, {"name": "labels"}], "name": "AMAROBot
+          XGB model", "outputs": [{"name": "cv results"}, {"name": "model file"},
+          {"name": "MLPipeline Metrics", "type": "Metrics"}]}', pipelines.kubeflow.org/component_ref: '{"digest":
+          "ef6c59cbb2d7907b990032ca6eaef02238589f9d9c90ccbf01a3d0035868df8d", "url":
+          "./train-xgb/component.yaml"}'}
+  arguments:
+    parameters: []
+  serviceAccountName: pipeline-runner

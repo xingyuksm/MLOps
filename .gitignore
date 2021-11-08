@@ -6,3 +6,4 @@
 docker-compose.yml
 pipeline/deploy_model/model/model.pkl
 pipeline/deploy_model/model/le
+/amaro/tmp/*

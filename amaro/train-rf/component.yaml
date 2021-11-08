@@ -1,0 +1,23 @@
+name: AMAROBot RF model
+description: Trains a random forest classifier for the AMAROBot dataset
+
+inputs:
+- {name: features}
+- {name: labels}
+
+outputs:
+- {name: cv results}
+- {name: model file}
+- {name: MLPipeline Metrics, type: Metrics}
+
+implementation:
+  container:
+    image: xingyuusa/mlops-test:amaro-rf
+    command: [
+      model.py,
+      --features_file_path, {inputPath: features},
+      --labels, {inputPath: labels},
+      --cv_results_file_path, {outputPath: cv results},
+      --model_file_path, {outputPath: model file},
+      --kfp_metrics_path, {outputPath: MLPipeline Metrics}
+    ]
