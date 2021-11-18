@@ -202,6 +202,23 @@ client.create_run_from_pipeline_func(
     })
 ```
 
+## Create Experiments with KFP UI
+Once a pipeline is created, it can be uploaded to Kubeflow pipeline to create experiments and runs.
+
+The important concepts are:
+1. Pipelines: Pipelines are DAGs that represent a series of jobs to be run. We showcased how to build a pipeline with components and pipeline definitions in the previous sections. A pipeline can have multiple versions. Hence, when you update the pipeline YAML file. You can upload a new version instead of creating a new pipeline.
+![pipelines](./screenshots/pipeline.png)
+2. Experiments: an experiment is a collection of runs of DAGs.
+![experiments](./screenshots/experiments.png)
+3. Runs: a run is an execution of a DAG.
+![runs](./screenshots/runs.png)
+
+The following steps are recommended to create experiments.
+1. Upload the pipeline YAML file to create a new pipeline.
+2. Create an experiment with KFP UI.
+3. Create runs under the experiment, which can be either one-off or repeated.
+
+[This](https://www.kubeflow.org/docs/components/pipelines/overview/interfaces/) is the official introduction of the KFP UI.
 
 ## Kubeflow Pipeline vs Airflow
 
